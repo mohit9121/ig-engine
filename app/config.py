@@ -21,8 +21,22 @@ GITHUB_RAW_BASE_URL = (
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESOURCES_ROOT = PROJECT_ROOT / "resources"
 RESOURCES_POSTS_DIR = RESOURCES_ROOT / "ig" / "posts" / "days"
+RESOURCES_MUSIC_DIR = RESOURCES_ROOT / "ig" / "music" / "background"
 
 SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+SUPPORTED_POST_STYLES = {"documentary", "editorial", "cinematic", "minimal"}
+
+# Research-prompt aliases → actual filenames in resources/ig/music/background/
+BACKGROUND_MUSIC_ALIASES = {
+    "suspense-dark.mp3": "suspense.mp3",
+    "epic-ambient.mp3": "epic.mp3",
+    "haunting-india.mp3": "horror.mp3",
+    "suspense.mp3": "suspense.mp3",
+    "epic.mp3": "epic.mp3",
+    "horror.mp3": "horror.mp3",
+    "tension-build.mp3": "tension-build.mp3",
+    "reveal-cinematic.mp3": "reveal-cinematic.mp3",
+}
 
 POLL_DELAY_SECONDS = 5
 POLL_MAX_ATTEMPTS = 20

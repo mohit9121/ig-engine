@@ -157,21 +157,51 @@ def build_audio_filter(audio_input_index: int, video_duration: float) -> str:
     )
 
 
+def resolve_image_durations(
+    image_count: int,
+    image_duration: float | None = None,
+    image_durations: list[float] | None = None,
+) -> list[float]:
+    """Resolve per-image durations from a uniform value or an explicit list."""
+    if image_durations is not None:
+        if len(image_durations) != image_count:
+            raise ValueError(
+                f"Expected {image_count} image durations, got {len(image_durations)}."
+            )
+        if any(duration <= 0 for duration in image_durations):
+            raise ValueError("All image durations must be greater than 0.")
+        return image_durations
+
+    if image_duration is None:
+        image_duration = IMAGE_DURATION_SECONDS
+
+    if image_duration <= 0:
+        raise ValueError("image_duration must be greater than 0.")
+
+    return [image_duration] * image_count
+
+
 def generate_reel(
     images: list[Path],
     audio_path: Path,
     output_path: Path,
-    image_duration: float,
+    image_duration: float | None = None,
+    image_durations: list[float] | None = None,
 ) -> None:
     """Generate a Reel-style MP4 from ordered images and background audio."""
-    video_duration = len(images) * image_duration
+    durations = resolve_image_durations(
+        len(images),
+        image_duration=image_duration,
+        image_durations=image_durations,
+    )
+    video_duration = sum(durations)
     audio_duration = get_audio_duration(audio_path)
     loop_audio = audio_duration < video_duration
 
     cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error"]
 
-    for image in images:
-        cmd.extend(["-loop", "1", "-t", str(image_duration), "-i", str(image)])
+    for image, duration in zip(images, durations):
+        cmd.extend(["-loop", "1", "-t", str(duration), "-i", str(image)])
 
     if loop_audio:
         cmd.extend(["-stream_loop", "-1"])

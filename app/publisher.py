@@ -160,7 +160,7 @@ def publish_carousel(image_urls: list[str], caption: str) -> str:
 
 
 def create_reel_container(video_url: str, caption: str) -> str:
-    """Create an Instagram Reel media container."""
+    """Create an Instagram Reel media container from a public video URL."""
     print("Creating Reel media container...")
 
     url = f"{config.API_BASE_URL}/{config.API_VERSION}/{config.IG_ID}/media"

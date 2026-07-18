@@ -17,6 +17,37 @@ def local_path_to_github_raw_url(local_path: Path) -> str:
     return f"{config.GITHUB_RAW_BASE_URL}/{relative_path.as_posix()}"
 
 
+def resolve_background_music(music_name: str) -> Path:
+    """
+    Resolve a background music filename (or research-prompt alias)
+    to a local file under resources/ig/music/background/.
+    """
+    filename = Path(music_name).name
+    resolved_name = config.BACKGROUND_MUSIC_ALIASES.get(filename, filename)
+    music_path = config.RESOURCES_MUSIC_DIR / resolved_name
+
+    if not music_path.is_file():
+        available = sorted(
+            path.name
+            for path in config.RESOURCES_MUSIC_DIR.glob("*.mp3")
+            if path.is_file()
+        )
+        available_text = ", ".join(available) if available else "(none found)"
+        raise FileNotFoundError(
+            f"Background music not found: {music_name} "
+            f"(resolved to {resolved_name}). "
+            f"Available: {available_text}"
+        )
+
+    return music_path
+
+
+def music_github_raw_url(music_name: str) -> str:
+    """Return the public GitHub raw URL for a background music file."""
+    music_path = resolve_background_music(music_name)
+    return local_path_to_github_raw_url(music_path)
+
+
 def verify_public_resource_url(url: str) -> None:
     """Verify that a resource URL is publicly reachable."""
     response = requests.head(
