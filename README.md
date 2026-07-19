@@ -13,15 +13,18 @@ V1 currently only handles:
 ## Architecture
 
 ```
-Content Generator (Future)
-        ↓
-Image Renderer (Future)
-        ↓
-Resources Repository
-        ↓
-Instagram Publisher
-        ↓
-Instagram
+ig-engine/
+├── app/                 # Shared config, Instagram API, day-folder helpers
+├── generation/          # Local Reel generation from post.json (no publish)
+├── publishing/          # Instagram publish only (assumes public GitHub URLs)
+├── utils/               # Low-level renderers (image styles, ffmpeg reel)
+└── resources/           # Nested public repo (media assets)
+```
+
+Generation and publishing stay separate on purpose:
+
+```
+post.json → generation → local reel.mp4 → (manual git push) → publishing → Instagram
 ```
 
 ## Two-Repository Setup
@@ -101,25 +104,33 @@ Daily Automated Publishing
 
 | Task | Command |
 |------|---------|
-| Generate Reel (local MP4) | `python -m utils.reel.generate_reel <day-folder>` |
-| Publish carousel / image | `python main.py` |
-| Publish Reel | `python publish_reel.py` |
+| Generate missing text Reels (bulk) | `python -m generation.generate_reels` |
+| Generate one day's text Reel | `python -m generation.generate_reels --date YYYY-MM-DD` |
+| Generate Reel from images + MP3 | `python -m utils.reel.generate_reel <day-folder>` |
+| Publish today's Reel | `python -m publishing.publish_reel` |
+| Publish today's image/carousel | `python -m publishing.publish_images` |
 
 ## How to Run
 
-**Publish today's carousel or image:**
+**Generate missing text Reels locally (from `post.json`):**
 
 ```bash
-python main.py
+python -m generation.generate_reels
 ```
 
-**Publish today's Reel:**
+**Publish today's Reel** (assumes `reel/reel.mp4` is already pushed to the public resources repo):
 
 ```bash
-python publish_reel.py
+python -m publishing.publish_reel
 ```
 
-Both commands discover today's date automatically and expect resources under `resources/ig/posts/days/YYYY-MM-DD/`. They convert local paths to raw GitHub URLs before calling the Instagram API.
+**Publish today's image / carousel:**
+
+```bash
+python -m publishing.publish_images
+```
+
+All publish commands default to today's date (`YYYY-MM-DD`) and accept `--date` to override. They convert local paths to raw GitHub URLs before calling the Instagram API.
 
 ## Reel Generator
 

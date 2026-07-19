@@ -1,27 +1,15 @@
-"""Generate styled images and a Reel from a day-wise post.json."""
+"""Generate a local Reel from a day folder's post.json."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-from app import config
+from app.days import post_json_path, reel_path_for
 from app.post_spec import build_caption, load_post_json
 from app.resources import music_github_raw_url, resolve_background_music
 from utils.image.render import render
 from utils.reel.generate_reel import check_ffmpeg, generate_reel
-
-
-def day_folder_for(date_str: str) -> Path:
-    return config.RESOURCES_POSTS_DIR / date_str
-
-
-def post_json_path(day_folder: Path) -> Path:
-    return day_folder / "post.json"
-
-
-def reel_path_for(day_folder: Path) -> Path:
-    return day_folder / "reel" / "reel.mp4"
 
 
 def render_scene_images(post: dict[str, Any], day_folder: Path) -> list[Path]:
@@ -50,10 +38,9 @@ def generate_text_reel(
     post: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
-    Load post.json (unless provided), render scene images, and generate reel.mp4.
+    Load post.json, render scene images, and write reel/reel.mp4 locally.
 
-    Returns a summary dict with local paths and the Instagram caption.
-    Does not push anything to GitHub.
+    Does not publish or push to GitHub.
     """
     day_folder = day_folder.expanduser().resolve()
     if not day_folder.is_dir():
@@ -83,14 +70,12 @@ def generate_text_reel(
         image_durations=durations,
     )
 
-    caption = build_caption(post)
-
     return {
         "post": post,
         "day_folder": day_folder,
         "images": images,
         "music_path": music_path,
         "reel_path": output_path,
-        "caption": caption,
+        "caption": build_caption(post),
         "durations": durations,
     }

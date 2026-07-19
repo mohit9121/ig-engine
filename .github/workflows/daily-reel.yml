@@ -1,0 +1,113 @@
+# daily-reel.yml
+#
+# Publishes the day's Instagram Reel from the public resources repository.
+# Runs daily at 11:30 UTC = 5:00 PM IST (UTC+5:30).
+#
+# Keepalive note:
+#   GitHub disables scheduled workflows after 60 days of repo inactivity.
+#   To prevent this, either:
+#     a) Commit something (e.g., published.json gets updated on each run and
+#        can be committed back via a post-step), OR
+#     b) Use the keepalive step below that makes a dummy API call / touch commit.
+#   The workflow_dispatch trigger also resets the inactivity timer when used.
+
+name: Daily Reel Publisher
+
+on:
+  # ── Scheduled: 5:00 PM IST = 11:30 UTC ─────────────────────────────────
+  # To change timezone, adjust the UTC offset manually:
+  #   IST = UTC+5:30  → subtract 5h30m from desired local time
+  #   E.g. 6:00 PM IST = 12:30 UTC → "30 12 * * *"
+  schedule:
+    - cron: "30 11 * * *"
+
+  # ── Manual trigger with optional date override ───────────────────────────
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Date to publish (YYYY-MM-DD). Leave blank to use today."
+        required: false
+        default: ""
+      force:
+        description: "Force re-publish even if already logged (true/false)"
+        required: false
+        default: "false"
+
+jobs:
+  publish-reel:
+    name: Publish Reel
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ── 1. Checkout code repo ────────────────────────────────────────────
+      - name: Checkout code repo
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Python ─────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # ── 3. Install dependencies ──────────────────────────────────────────
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ── 4. Determine date argument ───────────────────────────────────────
+      - name: Resolve publish date
+        id: resolve-date
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            echo "PUBLISH_DATE=${{ github.event.inputs.date }}" >> "$GITHUB_ENV"
+          else
+            # Default: today in IST (UTC+5:30)
+            echo "PUBLISH_DATE=$(TZ='Asia/Kolkata' date +%Y-%m-%d)" >> "$GITHUB_ENV"
+          fi
+
+      # ── 5. Publish the Reel ──────────────────────────────────────────────
+      - name: Publish Reel
+        env:
+          IG_ID: ${{ secrets.IG_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        run: |
+          DATE_ARG=""
+          if [ -n "$PUBLISH_DATE" ]; then
+            DATE_ARG="--date $PUBLISH_DATE"
+          fi
+
+          FORCE_ARG=""
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            FORCE_ARG="--force"
+          fi
+
+          python -m publishing.publish_reel $DATE_ARG $FORCE_ARG
+
+      # ── 6. Commit published.json back to repo (idempotency log) ──────────
+      # This also resets the 60-day inactivity timer (keepalive effect).
+      - name: Commit published.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add publishing/published.json || true
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+          else
+            git commit -m "chore: log published reel for $PUBLISH_DATE [skip ci]"
+            git push
+          fi
+
+      # ── 7. Keepalive fallback (runs even if step 6 has nothing to commit) ─
+      # Ensures the 60-day inactivity clock is reset via the GitHub API.
+      # Only needed if you don't want to depend on the published.json commit.
+      # Uncomment and add a KEEPALIVE_TOKEN secret (PAT with repo scope) if needed.
+      #
+      # - name: Keepalive ping
+      #   if: always()
+      #   run: |
+      #     curl -s -X POST \
+      #       -H "Authorization: token ${{ secrets.KEEPALIVE_TOKEN }}" \
+      #       -H "Accept: application/vnd.github+json" \
+      #       "https://api.github.com/repos/${{ github.repository }}/dispatches" \
+      #       -d '{"event_type":"keepalive"}'

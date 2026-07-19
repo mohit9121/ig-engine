@@ -18,7 +18,7 @@ STYLES = {
         "accent": "#F6C453",
         "text_color": "#FFFFFF",
         "overlay": 0.35,
-        "font_size": 24,
+        "font_size": 34,
         "text_width": 24,
         "line_spacing": 1.45,
         "accent_line": True,
